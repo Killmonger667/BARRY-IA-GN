@@ -1,4 +1,4 @@
-const CACHE = "risktaker-v1";
+const CACHE = "risktaker-v2";
 const ASSETS = ["./index.html", "./manifest.json"];
 
 self.addEventListener("install", (e) => {
