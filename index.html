@@ -169,6 +169,14 @@
     <div class="tagline">Réponses. Rédaction. Code. Stratégie.</div>
   </header>
 
+  <div id="keybar" style="display:none; padding:10px 20px; border-bottom:1px solid var(--line); font-size:12.5px; color:var(--text-dim);">
+    <div style="margin-bottom:6px;">Colle ta clé API Anthropic (obtenue sur console.anthropic.com) :</div>
+    <div style="display:flex; gap:8px;">
+      <input id="apikey" type="password" placeholder="sk-ant-..." style="flex:1; background:#ffffff08; border:1px solid var(--line); border-radius:8px; padding:8px 10px; color:var(--text); font-size:13px;" />
+      <button id="savekey" style="border:none; border-radius:8px; padding:8px 14px; background:var(--iris); color:#07050D; font-weight:600; font-size:12.5px;">Enregistrer</button>
+    </div>
+  </div>
+
   <div id="chips">
     <div class="chip" data-t="Résume-moi ceci en 5 points clairs : ">Résumer</div>
     <div class="chip" data-t="Traduis ce texte en anglais : ">Traduire</div>
@@ -239,6 +247,31 @@ const iris = document.getElementById('iris');
 
 let messages = [];
 
+// ---------- Gestion de la clé API ----------
+const keybar = document.getElementById('keybar');
+const apikeyInput = document.getElementById('apikey');
+const savekeyBtn = document.getElementById('savekey');
+
+function getApiKey() {
+  return localStorage.getItem('risktaker_api_key') || '';
+}
+function ensureKeyBar() {
+  if (!getApiKey()) {
+    keybar.style.display = 'block';
+  } else {
+    keybar.style.display = 'none';
+  }
+}
+savekeyBtn.addEventListener('click', () => {
+  const v = apikeyInput.value.trim();
+  if (v) {
+    localStorage.setItem('risktaker_api_key', v);
+    apikeyInput.value = '';
+    ensureKeyBar();
+  }
+});
+ensureKeyBar();
+
 function addMessage(role, content) {
   const wrap = document.createElement('div');
   wrap.className = 'msg ' + role;
@@ -284,10 +317,28 @@ async function sendMessage() {
   iris.classList.add('thinking');
   addThinking();
 
+  const key = getApiKey();
+  if (!key) {
+    removeThinking();
+    ensureKeyBar();
+    const wrap = document.createElement('div');
+    wrap.className = 'error';
+    wrap.textContent = 'Ajoute ta clé API ci-dessus avant d\'envoyer un message.';
+    chat.appendChild(wrap);
+    sendBtn.disabled = false;
+    iris.classList.remove('thinking');
+    return;
+  }
+
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 1500,
